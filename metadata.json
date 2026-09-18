@@ -1,0 +1,6 @@
+{
+  "name": "REKAP TRING AREA AMBON",
+  "description": "Aplikasi input data dan rekapitulasi real-time instalasi dan aktivasi akun nasabah TRING hasil prospek CRO dengan upload foto TRING dan ekspor Excel/PDF sesuai Surat Edaran No. 121/SE/2026.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
