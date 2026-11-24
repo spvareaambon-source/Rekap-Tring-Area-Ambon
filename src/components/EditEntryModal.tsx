@@ -1,5 +1,5 @@
-import React, { useState, useRef } from "react";
-import { X, Save, UploadCloud, Image as ImageIcon, Camera, Loader2, AlertCircle } from "lucide-react";
+import React, { useState, useRef, useEffect } from "react";
+import { X, Save, UploadCloud, Loader2, AlertCircle } from "lucide-react";
 import { PRODUK_OPTIONS, RekapEntry } from "../types";
 import { compressImage } from "../utils/imageUtils";
 
@@ -16,23 +16,43 @@ export const EditEntryModal: React.FC<EditEntryModalProps> = ({
   onClose,
   onSave,
 }) => {
-  if (!isOpen || !entry) return null;
-
-  const [tanggal, setTanggal] = useState(entry.tanggal);
-  const [namaNasabah, setNamaNasabah] = useState(entry.namaNasabah);
-  const [cif, setCif] = useState(entry.cif);
-  const [produk, setProduk] = useState(entry.produk);
-  const [keterangan, setKeterangan] = useState(entry.keterangan || "");
-  const [fotoTring, setFotoTring] = useState(entry.fotoTring || "");
+  const [tanggal, setTanggal] = useState("");
+  const [namaNasabah, setNamaNasabah] = useState("");
+  const [cif, setCif] = useState("");
+  const [produk, setProduk] = useState("Tabungan Emas");
+  const [keterangan, setKeterangan] = useState("");
+  const [fotoTring, setFotoTring] = useState("");
   const [isCompressing, setIsCompressing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  useEffect(() => {
+    if (isOpen && entry) {
+      setTanggal(entry.tanggal || "");
+      setNamaNasabah(entry.namaNasabah || "");
+      setCif(entry.cif || "");
+      setProduk(entry.produk || "Tabungan Emas");
+      setKeterangan(entry.keterangan || "");
+      setFotoTring(entry.fotoTring || "");
+      setErrorMsg("");
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  }, [entry, isOpen]);
+
+  if (!isOpen || !entry) return null;
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setErrorMsg("Harap pilih berkas gambar (JPG, PNG, WebP).");
+      return;
+    }
 
     try {
       setIsCompressing(true);
@@ -40,7 +60,7 @@ export const EditEntryModal: React.FC<EditEntryModalProps> = ({
       const compressed = await compressImage(file, 1200, 0.85);
       setFotoTring(compressed);
     } catch (err: any) {
-      setErrorMsg("Gagal memproses foto TRING: " + (err.message || ""));
+      setErrorMsg("Gagal memproses foto TRING: " + (err.message || "format tidak didukung"));
     } finally {
       setIsCompressing(false);
     }
@@ -166,7 +186,12 @@ export const EditEntryModal: React.FC<EditEntryModalProps> = ({
               {fotoTring && (
                 <button
                   type="button"
-                  onClick={() => setFotoTring("")}
+                  onClick={() => {
+                    setFotoTring("");
+                    if (fileInputRef.current) {
+                      fileInputRef.current.value = "";
+                    }
+                  }}
                   className="text-red-600 hover:underline font-normal text-[11px]"
                 >
                   Hapus Foto

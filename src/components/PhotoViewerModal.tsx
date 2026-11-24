@@ -12,12 +12,22 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({ photoUrl, en
   const [zoom, setZoom] = React.useState<number>(1);
   const [rotation, setRotation] = React.useState<number>(0);
 
+  React.useEffect(() => {
+    setZoom(1);
+    setRotation(0);
+  }, [photoUrl, entry?.id]);
+
   if (!photoUrl || !entry) return null;
 
   const handleDownload = () => {
+    const ext = photoUrl.includes("image/png")
+      ? "png"
+      : photoUrl.includes("image/webp")
+      ? "webp"
+      : "jpg";
     const a = document.createElement("a");
     a.href = photoUrl;
-    a.download = `Foto_TRING_${entry.namaNasabah.replace(/\s+/g, "_")}_${entry.cif}.jpg`;
+    a.download = `Foto_TRING_${entry.namaNasabah.replace(/\s+/g, "_")}_${entry.cif}.${ext}`;
     a.click();
   };
 

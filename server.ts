@@ -40,6 +40,18 @@ interface DatabaseSchema {
   entries: RekapEntry[];
 }
 
+function getLocalDateString(date: Date = new Date()): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function isValidImageDataUrl(value?: string): boolean {
+  if (!value) return true;
+  return /^data:image\/(jpeg|jpg|png|webp);base64,[A-Za-z0-9+/=]+$/i.test(value.trim());
+}
+
 const DEFAULT_HEADER: HeaderInfo = {
   lampiran: "Lampiran V",
   nomorSurat: "121/SE/2026",
@@ -48,10 +60,10 @@ const DEFAULT_HEADER: HeaderInfo = {
   subJudul: "DENGAN MINIMAL TRANSAKSI RP100.000",
   namaCro: "Rian Pratama",
   nikCro: "P.88210",
-  kodeCabang: "00421",
+  kodeCabang: "11169",
   namaCabang: "CP AMBON",
   kota: "Ambon",
-  tanggalLaporan: new Date().toISOString().split("T")[0],
+  tanggalLaporan: getLocalDateString(),
   namaPemimpinCabang: "Ahmad Fauzi, S.E.",
   nikPemimpinCabang: "P.65432",
   namaBpoPenjualan: "Budi Santoso",
@@ -248,20 +260,27 @@ async function startServer() {
   // Add new entry
   app.post("/api/rekap/entries", (req, res) => {
     try {
-      const { tanggal, namaNasabah, cif, produk, fotoTring, keterangan } = req.body;
-      if (!namaNasabah || !cif) {
+      const { tanggal, namaNasabah, cif, produk, fotoTring, keterangan } = req.body || {};
+      const cleanName = typeof namaNasabah === "string" ? namaNasabah.trim() : "";
+      const cleanCif = typeof cif === "string" ? cif.trim() : "";
+      if (!cleanName || !cleanCif) {
         return res.status(400).json({ error: "Nama Nasabah dan CIF wajib diisi." });
+      }
+
+      const cleanFoto = typeof fotoTring === "string" ? fotoTring.trim() : "";
+      if (!isValidImageDataUrl(cleanFoto)) {
+        return res.status(400).json({ error: "Format foto TRING tidak valid." });
       }
 
       const currentData = ensureDbFile();
       const newEntry: RekapEntry = {
         id: `entry-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-        tanggal: tanggal || new Date().toISOString().split("T")[0],
-        namaNasabah: String(namaNasabah).trim(),
-        cif: String(cif).trim(),
-        produk: String(produk || "Tabungan Emas").trim(),
-        fotoTring: fotoTring || "",
-        keterangan: keterangan || "Sukses",
+        tanggal: typeof tanggal === "string" && tanggal.trim() ? tanggal.trim() : getLocalDateString(),
+        namaNasabah: cleanName,
+        cif: cleanCif,
+        produk: typeof produk === "string" && produk.trim() ? produk.trim() : "Tabungan Emas",
+        fotoTring: cleanFoto,
+        keterangan: typeof keterangan === "string" ? keterangan.trim() : "Sukses",
         createdAt: new Date().toISOString()
       };
 
@@ -284,10 +303,35 @@ async function startServer() {
         return res.status(404).json({ error: "Entry not found" });
       }
 
+      const body = req.body || {};
+      const existing = currentData.entries[index];
+
+      const nextName =
+        body.namaNasabah !== undefined ? String(body.namaNasabah).trim() : existing.namaNasabah;
+      const nextCif =
+        body.cif !== undefined ? String(body.cif).trim() : existing.cif;
+
+      if (!nextName || !nextCif) {
+        return res.status(400).json({ error: "Nama Nasabah dan CIF wajib diisi." });
+      }
+
+      const nextFoto =
+        body.fotoTring !== undefined ? String(body.fotoTring).trim() : existing.fotoTring || "";
+      if (!isValidImageDataUrl(nextFoto)) {
+        return res.status(400).json({ error: "Format foto TRING tidak valid." });
+      }
+
       currentData.entries[index] = {
-        ...currentData.entries[index],
-        ...req.body,
-        id // protect id
+        ...existing,
+        tanggal: body.tanggal !== undefined ? String(body.tanggal).trim() : existing.tanggal,
+        namaNasabah: nextName,
+        cif: nextCif,
+        produk: body.produk !== undefined ? String(body.produk).trim() : existing.produk,
+        fotoTring: nextFoto,
+        keterangan:
+          body.keterangan !== undefined ? String(body.keterangan).trim() : existing.keterangan,
+        id: existing.id,
+        createdAt: existing.createdAt,
       };
       saveDb(currentData);
 
@@ -315,13 +359,13 @@ async function startServer() {
   // Reset or Seed sample data
   app.post("/api/rekap/reset", (req, res) => {
     try {
-      const { action } = req.body;
+      const { action } = req.body || {};
       const currentData = ensureDbFile();
       if (action === "clear-all") {
         currentData.entries = [];
       } else {
-        currentData.entries = [...DEFAULT_ENTRIES];
-        currentData.headerInfo = { ...DEFAULT_HEADER };
+        currentData.entries = DEFAULT_ENTRIES.map((item) => ({ ...item }));
+        currentData.headerInfo = { ...DEFAULT_HEADER, tanggalLaporan: getLocalDateString() };
       }
       saveDb(currentData);
       res.json({ success: true, data: currentData });

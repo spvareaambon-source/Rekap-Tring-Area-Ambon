@@ -1,22 +1,39 @@
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { HeaderInfo, RekapEntry } from "../types";
+import { HeaderInfo, RekapEntry, isValidImageDataUrl } from "../types";
 import { PEGADAIAN_LOGO_BASE64 } from "../assets/pegadaianLogoBase64";
 
 export function formatIndoDate(dateStr?: string): string {
   if (!dateStr) return "";
   try {
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return dateStr;
     const months = [
       "Januari", "Februari", "Maret", "April", "Mei", "Juni",
       "Juli", "Agustus", "September", "Oktober", "November", "Desember"
     ];
+    const isoMatch = /^(\d{4})-(\d{2})-(\d{2})/.exec(dateStr.trim());
+    if (isoMatch) {
+      const year = Number(isoMatch[1]);
+      const monthIdx = Number(isoMatch[2]) - 1;
+      const day = Number(isoMatch[3]);
+      if (monthIdx >= 0 && monthIdx < 12 && day >= 1 && day <= 31) {
+        return `${day} ${months[monthIdx]} ${year}`;
+      }
+    }
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
     return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
   } catch {
     return dateStr;
   }
+}
+
+function sanitizeFilenamePart(value?: string, fallback = "export"): string {
+  const cleaned = (value || "")
+    .trim()
+    .replace(/[^a-zA-Z0-9_-]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  return cleaned || fallback;
 }
 
 export function exportToExcel(header: HeaderInfo, entries: RekapEntry[]) {
@@ -76,7 +93,7 @@ export function exportToExcel(header: HeaderInfo, entries: RekapEntry[]) {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Rekap TRING");
 
-  const fileName = `Rekap_TRING_${header.namaCabang.replace(/\s+/g, "_")}_${header.tanggalLaporan || "export"}.xlsx`;
+  const fileName = `Rekap_TRING_${sanitizeFilenamePart(header.namaCabang, "Cabang")}_${sanitizeFilenamePart(header.tanggalLaporan, "export")}.xlsx`;
   XLSX.writeFile(wb, fileName);
 }
 
@@ -271,10 +288,19 @@ export function exportToPdf(header: HeaderInfo, entries: RekapEntry[]) {
       const maxW = pageWidth - (marginX * 2); // 190 mm
       const maxH = pageHeight - topY - 12;    // ~257 mm
 
+      const photoSrc = entry.fotoTring || "";
+      if (!isValidImageDataUrl(photoSrc)) {
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "italic");
+        doc.setTextColor(220, 38, 38);
+        doc.text("(Format gambar tidak valid atau tidak didukung)", pageWidth / 2, topY + 40, { align: "center" });
+        return;
+      }
+
       let imgFormat = "JPEG";
-      if (entry.fotoTring!.includes("image/png")) {
+      if (photoSrc.includes("image/png")) {
         imgFormat = "PNG";
-      } else if (entry.fotoTring!.includes("image/webp")) {
+      } else if (photoSrc.includes("image/webp")) {
         imgFormat = "WEBP";
       }
 
@@ -338,6 +364,6 @@ export function exportToPdf(header: HeaderInfo, entries: RekapEntry[]) {
     });
   }
 
-  const fileName = `Rekap_TRING_${header.namaCabang.replace(/\s+/g, "_")}_${header.tanggalLaporan || "export"}.pdf`;
+  const fileName = `Rekap_TRING_${sanitizeFilenamePart(header.namaCabang, "Cabang")}_${sanitizeFilenamePart(header.tanggalLaporan, "export")}.pdf`;
   doc.save(fileName);
 }

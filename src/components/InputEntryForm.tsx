@@ -1,6 +1,6 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { PlusCircle, UploadCloud, X, Image as ImageIcon, CheckCircle2, AlertCircle, Camera, Loader2 } from "lucide-react";
-import { PRODUK_OPTIONS, RekapEntry } from "../types";
+import { PRODUK_OPTIONS, RekapEntry, getLocalDateString } from "../types";
 import { compressImage } from "../utils/imageUtils";
 
 interface InputEntryFormProps {
@@ -9,7 +9,7 @@ interface InputEntryFormProps {
 }
 
 export const InputEntryForm: React.FC<InputEntryFormProps> = ({ onAddEntry, totalRows }) => {
-  const [tanggal, setTanggal] = useState<string>(new Date().toISOString().split("T")[0]);
+  const [tanggal, setTanggal] = useState<string>(() => getLocalDateString());
   const [namaNasabah, setNamaNasabah] = useState<string>("");
   const [cif, setCif] = useState<string>("");
   const [produk, setProduk] = useState<string>("Tabungan Emas");
@@ -22,10 +22,24 @@ export const InputEntryForm: React.FC<InputEntryFormProps> = ({ onAddEntry, tota
   const [successMsg, setSuccessMsg] = useState<string>("");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const successTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (successTimeoutRef.current) {
+        clearTimeout(successTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setErrorMsg("Harap unggah berkas gambar (JPG, PNG, WebP).");
+      return;
+    }
 
     try {
       setIsCompressing(true);
@@ -107,7 +121,10 @@ export const InputEntryForm: React.FC<InputEntryFormProps> = ({ onAddEntry, tota
       }
 
       // Auto dismiss success notice after 4 seconds
-      setTimeout(() => setSuccessMsg(""), 4000);
+      if (successTimeoutRef.current) {
+        clearTimeout(successTimeoutRef.current);
+      }
+      successTimeoutRef.current = setTimeout(() => setSuccessMsg(""), 4000);
     } catch (err: any) {
       setErrorMsg(err.message || "Terjadi kesalahan saat menyimpan data.");
     } finally {

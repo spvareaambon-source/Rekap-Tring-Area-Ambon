@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import { HeaderInfo, RekapEntry } from "../types";
+import { HeaderInfo, PRODUK_OPTIONS, RekapEntry, getLocalDateString } from "../types";
 import { formatIndoDate } from "../utils/exportUtils";
-import { Search, Eye, Trash2, Edit3, Image as ImageIcon, CheckCircle, FileText, LayoutGrid, AlertCircle } from "lucide-react";
+import { Search, Eye, Trash2, Edit3, Image as ImageIcon, FileText, LayoutGrid } from "lucide-react";
 import pegadaianLogo from "../assets/images/pegadaian-logo.png";
 
 interface RekapOfficialDocProps {
@@ -35,15 +35,15 @@ export const RekapOfficialDoc: React.FC<RekapOfficialDocProps> = ({
     return matchesSearch && matchesProduk;
   });
 
-  // Calculate statistics
-  const todayStr = new Date().toISOString().split("T")[0];
+  // Calculate statistics using local timezone date
+  const todayStr = getLocalDateString();
   const todayCount = entries.filter((e) => e.tanggal === todayStr).length;
   const withPhotoEntries = entries.filter((e) => Boolean(e.fotoTring));
   const withPhotoCount = withPhotoEntries.length;
 
-  // For the official document view, pad with empty rows up to at least 14 or 20 like in the PDF template
+  // For the official document view, pad with empty rows up to at least 14
   const minRows = Math.max(14, filteredEntries.length);
-  const paddedRowsCount = Math.max(0, minRows - filteredEntries.length);
+  const paddedRowsCount = viewMode === "official" ? Math.max(0, minRows - filteredEntries.length) : 0;
 
   return (
     <div id="rekap-container" className="space-y-4">
@@ -108,11 +108,11 @@ export const RekapOfficialDoc: React.FC<RekapOfficialDocProps> = ({
             className="text-xs py-1.5 px-3 rounded-lg border border-gray-300 bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none"
           >
             <option value="ALL">Semua Produk</option>
-            <option value="Tabungan Emas">Tabungan Emas</option>
-            <option value="Cicil Emas">Cicil Emas</option>
-            <option value="Gadai Tabungan Emas">Gadai Tabungan Emas</option>
-            <option value="Mulia">Mulia</option>
-            <option value="Pembiayaan TRING">Pembiayaan TRING</option>
+            {PRODUK_OPTIONS.map((opt) => (
+              <option key={opt} value={opt}>
+                {opt}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -239,10 +239,20 @@ export const RekapOfficialDoc: React.FC<RekapOfficialDocProps> = ({
                 <th className="py-2 px-4 border-r border-gray-800 text-center font-bold">Nama Nasabah</th>
                 <th className="py-2 px-3 border-r border-gray-800 text-center font-bold w-36">CIF</th>
                 <th className="py-2 px-3 border-r border-gray-800 text-center font-bold w-44">Produk</th>
+                {viewMode === "interactive" && (
+                  <th className="py-2 px-3 border-r border-gray-800 text-center font-bold print:hidden">Keterangan</th>
+                )}
                 <th className="py-2 px-2 text-center font-bold w-24 print:hidden">Aksi</th>
               </tr>
             </thead>
             <tbody>
+              {filteredEntries.length === 0 && viewMode === "interactive" && (
+                <tr className="border-b border-gray-800 print:hidden">
+                  <td colSpan={7} className="py-8 text-center text-gray-500 text-xs">
+                    Tidak ada data nasabah yang sesuai dengan pencarian atau filter produk.
+                  </td>
+                </tr>
+              )}
               {filteredEntries.map((entry, index) => (
                 <tr
                   key={entry.id}
@@ -276,6 +286,11 @@ export const RekapOfficialDoc: React.FC<RekapOfficialDocProps> = ({
                   <td className="py-2 px-3 border-r border-gray-800 text-center font-medium">
                     {entry.produk}
                   </td>
+                  {viewMode === "interactive" && (
+                    <td className="py-2 px-3 border-r border-gray-800 text-gray-700 print:hidden">
+                      {entry.keterangan || "-"}
+                    </td>
+                  )}
                   <td className="py-1.5 px-2 text-center print:hidden">
                     <div className="flex items-center justify-center gap-1">
                       {entry.fotoTring && (

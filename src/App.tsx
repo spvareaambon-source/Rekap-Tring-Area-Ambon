@@ -15,7 +15,7 @@ import { RekapOfficialDoc } from "./components/RekapOfficialDoc";
 import { PhotoViewerModal } from "./components/PhotoViewerModal";
 import { HeaderSettingsModal } from "./components/HeaderSettingsModal";
 import { EditEntryModal } from "./components/EditEntryModal";
-import { AlertCircle, CheckCircle2, Loader2, RefreshCw } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 
 export default function App() {
   const [headerInfo, setHeaderInfo] = useState<HeaderInfo | null>(null);
@@ -30,8 +30,17 @@ export default function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [editingEntry, setEditingEntry] = useState<RekapEntry | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
+  const [isResetConfirmOpen, setIsResetConfirmOpen] = useState<boolean>(false);
 
-  const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) {
+        clearTimeout(toastTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const showToast = useCallback((text: string, type: "success" | "info" | "error" = "success") => {
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
@@ -62,6 +71,16 @@ export default function App() {
 
   useEffect(() => {
     loadData(false);
+  }, [loadData]);
+
+  useEffect(() => {
+    const hasOpenModal =
+      isSettingsOpen ||
+      Boolean(editingEntry) ||
+      Boolean(deleteConfirm) ||
+      isResetConfirmOpen;
+
+    if (hasOpenModal) return;
 
     // Periodic real-time poll every 6 seconds to keep multi-tab / server in sync
     const interval = setInterval(() => {
@@ -69,14 +88,19 @@ export default function App() {
     }, 6000);
 
     return () => clearInterval(interval);
-  }, [loadData]);
+  }, [loadData, isSettingsOpen, editingEntry, deleteConfirm, isResetConfirmOpen]);
 
   // Handle Add Entry
   const handleAddEntry = async (entryData: Omit<RekapEntry, "id" | "createdAt">) => {
     try {
       const created = await addRekapEntry(entryData);
-      setEntries((prev) => [...prev, created]);
-      showToast(`Baris No. ${entries.length + 1} (${created.namaNasabah}) berhasil ditambahkan ke database!`);
+      let nextCount = 1;
+      setEntries((prev) => {
+        const updated = [...prev, created];
+        nextCount = updated.length;
+        return updated;
+      });
+      showToast(`Baris No. ${nextCount} (${created.namaNasabah}) berhasil ditambahkan ke database!`);
     } catch (err: any) {
       showToast(err.message || "Gagal menambahkan entry", "error");
       throw err;
@@ -120,12 +144,15 @@ export default function App() {
     }
   };
 
-  // Handle Reset data
-  const handleResetData = async () => {
-    if (!window.confirm("Muat ulang data contoh standar sesuai Surat Edaran 121/SE/2026?")) {
-      return;
-    }
+  // Handle Reset data via in-app confirmation modal
+  const handleRequestResetData = () => {
+    setIsResetConfirmOpen(true);
+  };
+
+  const handleConfirmResetData = async () => {
     try {
+      setIsResetConfirmOpen(false);
+      setIsSettingsOpen(false);
       setIsLoading(true);
       const data = await resetRekapData("seed");
       setHeaderInfo(data.headerInfo);
@@ -209,7 +236,7 @@ export default function App() {
           onExportPdf={handleExportPdf}
           onPrint={handlePrint}
           onRefresh={() => loadData(false)}
-          onResetData={handleResetData}
+          onResetData={handleRequestResetData}
         />
       )}
 
@@ -271,7 +298,7 @@ export default function App() {
           isOpen={isSettingsOpen}
           onClose={() => setIsSettingsOpen(false)}
           onSave={handleSaveHeader}
-          onResetToTemplate={handleResetData}
+          onResetToTemplate={handleRequestResetData}
         />
       )}
 
@@ -304,6 +331,34 @@ export default function App() {
                 className="px-3.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium transition-colors"
               >
                 Hapus Baris
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reset Template Confirmation Modal */}
+      {isResetConfirmOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 print:hidden animate-in fade-in duration-150">
+          <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-5 text-xs">
+            <h4 className="font-bold text-gray-900 text-sm mb-2">Muat Ulang Template Standar?</h4>
+            <p className="text-gray-600 mb-4">
+              Tindakan ini akan memuat ulang data contoh standar dan pengaturan surat sesuai format Surat Edaran No. 121/SE/2026.
+            </p>
+            <div className="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setIsResetConfirmOpen(false)}
+                className="px-3.5 py-1.5 rounded-lg border border-gray-300 hover:bg-gray-100 font-medium text-gray-700 transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmResetData}
+                className="px-3.5 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-medium transition-colors"
+              >
+                Muat Ulang Template
               </button>
             </div>
           </div>
