@@ -43,3 +43,23 @@ export const PRODUK_OPTIONS = [
   "Pembiayaan TRING",
   "Lainnya"
 ];
+
+export const CABANG_OPTIONS = [
+  "CP AMBON",
+  "CP NUSANIWE",
+  "CP PASSO",
+  "CP MASOHI",
+  "CP TUAL",
+  "CPS AMBON",
+] as const;
+
+export function normalizeCabangName(namaCabang?: string): string {
+  const trimmed = (namaCabang || "").trim().toUpperCase();
+  if (!trimmed) return "CP AMBON";
+  if ((CABANG_OPTIONS as readonly string[]).includes(trimmed)) {
+    return trimmed;
+  }
+  const withoutCp = trimmed.replace(/^CP\s+/, "");
+  const matched = CABANG_OPTIONS.find((opt) => opt === `CP ${withoutCp}` || opt === withoutCp);
+  return matched || "CP AMBON";
+}

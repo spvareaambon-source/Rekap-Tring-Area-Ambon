@@ -80,7 +80,7 @@ export const RekapOfficialDoc: React.FC<RekapOfficialDocProps> = ({
         <div className="bg-white p-3.5 rounded-xl border border-gray-200 shadow-2xs">
           <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wider">Unit / Cabang</p>
           <div className="mt-1">
-            <span className="text-sm font-bold text-gray-900 block truncate">CP {header.namaCabang}</span>
+            <span className="text-sm font-bold text-gray-900 block truncate">{header.namaCabang}</span>
             <span className="text-[11px] text-gray-500 font-mono">Kode: {header.kodeCabang}</span>
           </div>
         </div>
@@ -225,7 +225,7 @@ export const RekapOfficialDoc: React.FC<RekapOfficialDocProps> = ({
           <div className="grid grid-cols-[100px_10px_1fr] items-center">
             <span className="font-medium">Nama Cabang</span>
             <span>:</span>
-            <span className="font-semibold">CP {header.namaCabang || "-"}</span>
+            <span className="font-semibold">{header.namaCabang || "-"}</span>
           </div>
         </div>
 
@@ -411,7 +411,7 @@ export const RekapOfficialDoc: React.FC<RekapOfficialDocProps> = ({
 
           {/* Footer Lembar Kertas */}
           <div className="mt-3 pt-2.5 border-t border-gray-300 flex items-center justify-between text-[10px] md:text-[11px] text-gray-500">
-            <span>CP {header.namaCabang} ({header.kodeCabang})</span>
+            <span>{header.namaCabang} ({header.kodeCabang})</span>
             <span className="font-semibold text-emerald-900">Surat Edaran No. {header.nomorSurat}</span>
             <span>Lembar Lampiran #{idx + 1} dari {arr.length}</span>
           </div>

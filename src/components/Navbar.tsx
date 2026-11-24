@@ -54,7 +54,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span>Surat Edaran No. {header.nomorSurat} (Lampiran V)</span>
                 <span>•</span>
                 <span className="font-medium text-emerald-800">
-                  CP {header.namaCabang} ({header.kodeCabang})
+                  {header.namaCabang} ({header.kodeCabang})
                 </span>
                 <span>•</span>
                 <span>CRO: {header.namaCro} ({header.nikCro})</span>

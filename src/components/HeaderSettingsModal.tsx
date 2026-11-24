@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { X, Save, AlertCircle, RotateCcw } from "lucide-react";
-import { HeaderInfo } from "../types";
+import { HeaderInfo, CABANG_OPTIONS, normalizeCabangName } from "../types";
 
 interface HeaderSettingsModalProps {
   header: HeaderInfo;
@@ -17,9 +17,22 @@ export const HeaderSettingsModal: React.FC<HeaderSettingsModalProps> = ({
   onSave,
   onResetToTemplate,
 }) => {
-  const [formData, setFormData] = useState<HeaderInfo>({ ...header });
+  const [formData, setFormData] = useState<HeaderInfo>({
+    ...header,
+    namaCabang: normalizeCabangName(header.namaCabang),
+  });
   const [isSaving, setIsSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+
+  useEffect(() => {
+    if (isOpen) {
+      setFormData({
+        ...header,
+        namaCabang: normalizeCabangName(header.namaCabang),
+      });
+      setErrorMsg("");
+    }
+  }, [header, isOpen]);
 
   if (!isOpen) return null;
 
@@ -168,14 +181,18 @@ export const HeaderSettingsModal: React.FC<HeaderSettingsModalProps> = ({
                 />
               </div>
               <div>
-                <label className="block font-semibold text-gray-700 mb-1">Nama Cabang (CP ...)</label>
-                <input
-                  type="text"
+                <label className="block font-semibold text-gray-700 mb-1">Nama Cabang (CP / CPS)</label>
+                <select
                   value={formData.namaCabang}
                   onChange={(e) => handleChange("namaCabang", e.target.value)}
-                  placeholder="Ambon"
-                  className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                />
+                  className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none font-medium"
+                >
+                  {CABANG_OPTIONS.map((cabang) => (
+                    <option key={cabang} value={cabang}>
+                      {cabang}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
           </div>

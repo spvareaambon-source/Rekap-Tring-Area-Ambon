@@ -32,7 +32,7 @@ export function exportToExcel(header: HeaderInfo, entries: RekapEntry[]) {
     [`Nama CRO : ${header.namaCro}`],
     [`NIK : ${header.nikCro}`],
     [`Kode Cabang : ${header.kodeCabang}`],
-    [`Nama Cabang : CP ${header.namaCabang}`],
+    [`Nama Cabang : ${header.namaCabang}`],
     [],
     ["No", "Tanggal", "Nama Nasabah", "CIF", "Produk", "Keterangan"],
   ];
@@ -135,7 +135,7 @@ export function exportToPdf(header: HeaderInfo, entries: RekapEntry[]) {
   doc.text(`:  ${header.kodeCabang || "-"}`, valX, currentY + 9);
 
   doc.text("Nama Cabang", leftX, currentY + 13.5);
-  doc.text(`:  CP ${header.namaCabang || "-"}`, valX, currentY + 13.5);
+  doc.text(`:  ${header.namaCabang || "-"}`, valX, currentY + 13.5);
 
   currentY += 18;
 
@@ -330,7 +330,7 @@ export function exportToPdf(header: HeaderInfo, entries: RekapEntry[]) {
       doc.setFont("helvetica", "normal");
       doc.setTextColor(148, 163, 184);
       doc.text(
-        `Lembar ${idx + 1} dari ${entriesWithPhoto.length}  |  CP ${header.namaCabang} (${header.kodeCabang})  |  Surat Edaran No. ${header.nomorSurat}`,
+        `Lembar ${idx + 1} dari ${entriesWithPhoto.length}  |  ${header.namaCabang} (${header.kodeCabang})  |  Surat Edaran No. ${header.nomorSurat}`,
         pageWidth / 2,
         pageHeight - 5,
         { align: "center" }

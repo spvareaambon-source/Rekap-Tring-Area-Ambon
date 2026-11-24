@@ -49,7 +49,7 @@ const DEFAULT_HEADER: HeaderInfo = {
   namaCro: "Rian Pratama",
   nikCro: "P.88210",
   kodeCabang: "00421",
-  namaCabang: "CP Ambon",
+  namaCabang: "CP AMBON",
   kota: "Ambon",
   tanggalLaporan: new Date().toISOString().split("T")[0],
   namaPemimpinCabang: "Ahmad Fauzi, S.E.",
@@ -133,8 +133,25 @@ function ensureDbFile(): DatabaseSchema {
     const content = fs.readFileSync(DB_FILE, "utf-8");
     const parsed = JSON.parse(content) as DatabaseSchema;
 
-    // Migrate any legacy PDS/PSDS mentions to TRING
+    // Migrate any legacy PDS/PSDS mentions to TRING and normalize legacy cabang name
     let modified = false;
+    const ALLOWED_CABANG = ["CP AMBON", "CP NUSANIWE", "CP PASSO", "CP MASOHI", "CP TUAL", "CPS AMBON"];
+    const normalizeCabang = (val?: string) => {
+      const upper = (val || "").trim().toUpperCase();
+      if (!upper) return "CP AMBON";
+      if (ALLOWED_CABANG.includes(upper)) return upper;
+      const stripped = upper.replace(/^CP\s+/, "");
+      return ALLOWED_CABANG.find((c) => c === `CP ${stripped}` || c === stripped) || "CP AMBON";
+    };
+
+    if (parsed.headerInfo) {
+      const normalizedCabang = normalizeCabang(parsed.headerInfo.namaCabang);
+      if (parsed.headerInfo.namaCabang !== normalizedCabang) {
+        parsed.headerInfo.namaCabang = normalizedCabang;
+        modified = true;
+      }
+    }
+
     if (parsed.headerInfo?.subJudul?.includes("PDS / PSDS") || parsed.headerInfo?.subJudul?.includes("PDS/PSDS")) {
       parsed.headerInfo.subJudul = "TRING HASIL PROSPEK CRO";
       modified = true;
@@ -207,10 +224,19 @@ async function startServer() {
   // Update header info
   app.put("/api/rekap/header", (req, res) => {
     try {
+      const ALLOWED_CABANG = ["CP AMBON", "CP NUSANIWE", "CP PASSO", "CP MASOHI", "CP TUAL", "CPS AMBON"];
       const currentData = ensureDbFile();
+      const incoming = { ...req.body };
+      if (typeof incoming.namaCabang === "string") {
+        const upper = incoming.namaCabang.trim().toUpperCase();
+        if (!ALLOWED_CABANG.includes(upper)) {
+          return res.status(400).json({ error: "Pilihan cabang tidak valid. Pilih dari daftar CP/CPS Area Ambon." });
+        }
+        incoming.namaCabang = upper;
+      }
       currentData.headerInfo = {
         ...currentData.headerInfo,
-        ...req.body
+        ...incoming
       };
       saveDb(currentData);
       res.json({ success: true, headerInfo: currentData.headerInfo });
